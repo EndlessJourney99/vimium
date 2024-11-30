@@ -1,4 +1,3 @@
-//
 // This implements link hinting. Typing "F" will enter link-hinting mode, where all clickable items
 // on the page have a hint marker displayed containing a sequence of letters. Typing those letters
 // will select a link.
@@ -109,7 +108,10 @@ const OPEN_INCOGNITO = {
   name: "incognito",
   indicator: "Open link in incognito window",
   linkActivator(link) {
-    chrome.runtime.sendMessage({ handler: "openUrlInIncognito", url: link.href });
+    chrome.runtime.sendMessage({
+      handler: "openUrlInIncognito",
+      url: link.href,
+    });
   },
 };
 const DOWNLOAD_LINK_URL = {
@@ -173,14 +175,20 @@ const HintCoordinator = {
   // hidden, but is still receiving link hints messages via broadcastLinkHintsMessage.
   willHandleMessage(messageType) {
     if (this.linkHintsMode) return true;
-    return ["prepareToActivateMode", "activateMode", "getHintDescriptors", "exit"].includes(
-      messageType,
-    );
+    return [
+      "prepareToActivateMode",
+      "activateMode",
+      "getHintDescriptors",
+      "exit",
+    ].includes(messageType);
   },
 
   sendMessage(messageType, request) {
     if (request == null) request = {};
-    request = Object.assign(request, { messageType, handler: "broadcastLinkHintsMessage" });
+    request = Object.assign(request, {
+      messageType,
+      handler: "broadcastLinkHintsMessage",
+    });
     chrome.runtime.sendMessage(request);
   },
 
@@ -189,12 +197,13 @@ const HintCoordinator = {
     // mode. To prevent other Vimium commands from being triggered before link-hints mode is
     // launched, we install a temporary mode to block (and cache) keyboard events.
     let cacheAllKeydownEvents;
-    this.cacheAllKeydownEvents = cacheAllKeydownEvents = new CacheAllKeydownEvents({
-      name: "link-hints/suppress-keyboard-events",
-      singleton: "link-hints-mode",
-      indicator: "Collecting hints...",
-      exitOnEscape: true,
-    });
+    this.cacheAllKeydownEvents = cacheAllKeydownEvents =
+      new CacheAllKeydownEvents({
+        name: "link-hints/suppress-keyboard-events",
+        singleton: "link-hints-mode",
+        indicator: "Collecting hints...",
+        exitOnEscape: true,
+      });
     // FIXME(smblott) Global link hints is currently insufficiently reliable. If the mode above is
     // left in place, then Vimium blocks. As a temporary measure, we install a timer to remove it.
     // TODO(philc): I believe link hints is sufficiently reliable after the manifest V3 port
@@ -219,7 +228,9 @@ const HintCoordinator = {
   getHintDescriptors({ modeIndex, isVimiumHelpDialog }, _sender) {
     if (!DomUtils.isReady() || DomUtils.windowIsTooSmall()) return [];
 
-    const requireHref = [COPY_LINK_URL, OPEN_INCOGNITO].includes(availableModes[modeIndex]);
+    const requireHref = [COPY_LINK_URL, OPEN_INCOGNITO].includes(
+      availableModes[modeIndex],
+    );
     // If link hints is launched within the help dialog, then we only offer hints from that frame.
     // This improves the usability of the help dialog on the options page (particularly for
     // selecting command names).
@@ -228,13 +239,14 @@ const HintCoordinator = {
     } else {
       this.localHints = LocalHints.getLocalHints(requireHref);
     }
-    this.localHintDescriptors = this.localHints.map(({ linkText }, localIndex) => (
-      new HintDescriptor({
-        frameId,
-        localIndex,
-        linkText,
-      })
-    ));
+    this.localHintDescriptors = this.localHints.map(
+      ({ linkText }, localIndex) =>
+        new HintDescriptor({
+          frameId,
+          localIndex,
+          linkText,
+        }),
+    );
     return this.localHintDescriptors;
   },
 
@@ -242,7 +254,12 @@ const HintCoordinator = {
   // descriptors. We also propagate the key state between frames. Therefore, the hint-selection
   // process proceeds in lock step in every frame, and this.linkHintsMode is in the same state in
   // every frame.
-  activateMode({ frameId, frameIdToHintDescriptors, modeIndex, originatingFrameId }) {
+  activateMode({
+    frameId,
+    frameIdToHintDescriptors,
+    modeIndex,
+    originatingFrameId,
+  }) {
     // We do not receive the frame's own hint descritors back from the background page. Instead, we
     // merge them with the hint descriptors from other frames here. Note that
     // this.localHintDescriptors can be null if "getHintDescriptors" failed in this frame when it
@@ -260,7 +277,10 @@ const HintCoordinator = {
     if (frameId !== originatingFrameId) {
       this.onExit = [];
     }
-    this.linkHintsMode = new LinkHintsMode(hintDescriptors, availableModes[modeIndex]);
+    this.linkHintsMode = new LinkHintsMode(
+      hintDescriptors,
+      availableModes[modeIndex],
+    );
     // Replay keydown events which we missed (but for filtered hints only).
     if (Settings.get("filterLinkHints" && this.cacheAllKeydownEvents)) {
       this.cacheAllKeydownEvents.replayKeydownEvents();
@@ -279,7 +299,9 @@ const HintCoordinator = {
     this.linkHintsMode.setOpenLinkMode(availableModes[modeIndex], false);
   },
   activateActiveHintMarker() {
-    this.linkHintsMode.activateLink(this.linkHintsMode.markerMatcher.activeHintMarker);
+    this.linkHintsMode.activateLink(
+      this.linkHintsMode.markerMatcher.activeHintMarker,
+    );
   },
   getLocalHint(hint) {
     return this.localHints[hint.localIndex];
@@ -322,7 +344,7 @@ const LinkHints = {
         break;
     }
 
-    if ((count > 0) || (mode === OPEN_WITH_QUEUE)) {
+    if (count > 0 || mode === OPEN_WITH_QUEUE) {
       HintCoordinator.prepareToActivateMode(mode, function (isSuccess) {
         if (isSuccess) {
           // Wait for the next tick to allow the previous mode to exit. It might yet generate a
@@ -377,8 +399,12 @@ class LinkHintsMode {
     // This count is used to rank equal-scoring hints when sorting, thereby making JavaScript's sort
     // stable.
     this.stableSortCount = 0;
-    this.hintMarkers = hintDescriptors.map((desc) => this.createMarkerFor(desc));
-    this.markerMatcher = Settings.get("filterLinkHints") ? new FilterHints() : new AlphabetHints();
+    this.hintMarkers = hintDescriptors.map((desc) =>
+      this.createMarkerFor(desc),
+    );
+    this.markerMatcher = Settings.get("filterLinkHints")
+      ? new FilterHints()
+      : new AlphabetHints();
     this.markerMatcher.fillInMarkers(this.hintMarkers);
 
     this.hintMode = new Mode();
@@ -394,8 +420,9 @@ class LinkHintsMode {
     });
 
     this.hintMode.onExit((event) => {
-      const hintsWereCancelled = (event?.type === "click") ||
-        ((event?.type === "keydown") &&
+      const hintsWereCancelled =
+        event?.type === "click" ||
+        (event?.type === "keydown" &&
           (KeyboardUtils.isEscape(event) || KeyboardUtils.isBackspace(event)));
       if (hintsWereCancelled) {
         HintCoordinator.sendMessage("exit", { isSuccess: false });
@@ -417,7 +444,9 @@ class LinkHintsMode {
 
     // Append these markers as top level children instead of as child nodes to the link itself,
     // because some clickable elements cannot contain children, e.g. submit buttons.
-    const markerEls = this.hintMarkers.filter((m) => m.isLocalMarker()).map((m) => m.element);
+    const markerEls = this.hintMarkers
+      .filter((m) => m.isLocalMarker())
+      .map((m) => m.element);
     for (const el of markerEls) {
       this.containerEl.appendChild(el);
     }
@@ -463,7 +492,9 @@ class LinkHintsMode {
       const typedCharacters = this.markerMatcher.linkTextKeystrokeQueue
         ? this.markerMatcher.linkTextKeystrokeQueue.join("")
         : "";
-      const indicator = this.mode.indicator + (typedCharacters ? `: \"${typedCharacters}\"` : "") +
+      const indicator =
+        this.mode.indicator +
+        (typedCharacters ? `: \"${typedCharacters}\"` : "") +
         ".";
       this.hintMode.setIndicator(indicator);
     }
@@ -499,10 +530,14 @@ class LinkHintsMode {
 
     // NOTE(smblott) The modifier behaviour here applies only to alphabet hints.
     if (
-      ["Control", "Shift"].includes(event.key) && !Settings.get("filterLinkHints") &&
-      [OPEN_IN_CURRENT_TAB, OPEN_WITH_QUEUE, OPEN_IN_NEW_BG_TAB, OPEN_IN_NEW_FG_TAB].includes(
-        this.mode,
-      )
+      ["Control", "Shift"].includes(event.key) &&
+      !Settings.get("filterLinkHints") &&
+      [
+        OPEN_IN_CURRENT_TAB,
+        OPEN_WITH_QUEUE,
+        OPEN_IN_NEW_BG_TAB,
+        OPEN_IN_NEW_FG_TAB,
+      ].includes(this.mode)
     ) {
       // Toggle whether to open the link in a new or current tab.
       const previousMode = this.mode;
@@ -511,12 +546,16 @@ class LinkHintsMode {
       switch (key) {
         case "Shift":
           this.setOpenLinkMode(
-            this.mode === OPEN_IN_CURRENT_TAB ? OPEN_IN_NEW_BG_TAB : OPEN_IN_CURRENT_TAB,
+            this.mode === OPEN_IN_CURRENT_TAB
+              ? OPEN_IN_NEW_BG_TAB
+              : OPEN_IN_CURRENT_TAB,
           );
           break;
         case "Control":
           this.setOpenLinkMode(
-            this.mode === OPEN_IN_NEW_FG_TAB ? OPEN_IN_NEW_BG_TAB : OPEN_IN_NEW_FG_TAB,
+            this.mode === OPEN_IN_NEW_FG_TAB
+              ? OPEN_IN_NEW_BG_TAB
+              : OPEN_IN_NEW_FG_TAB,
           );
           break;
       }
@@ -551,7 +590,10 @@ class LinkHintsMode {
         this.tabCount++;
       }
       this.updateVisibleMarkers();
-    } else if ((event.key === " ") && this.markerMatcher.shouldRotateHints(event)) {
+    } else if (
+      event.key === " " &&
+      this.markerMatcher.shouldRotateHints(event)
+    ) {
       HintCoordinator.sendMessage("rotateHints");
     } else {
       if (!event.repeat) {
@@ -586,12 +628,13 @@ class LinkHintsMode {
   }
 
   updateKeyState({ hintKeystrokeQueue, linkTextKeystrokeQueue, tabCount }) {
-    Object.assign(this.markerMatcher, { hintKeystrokeQueue, linkTextKeystrokeQueue });
+    Object.assign(this.markerMatcher, {
+      hintKeystrokeQueue,
+      linkTextKeystrokeQueue,
+    });
 
-    const { linksMatched, userMightOverType } = this.markerMatcher.getMatchingHints(
-      this.hintMarkers,
-      tabCount,
-    );
+    const { linksMatched, userMightOverType } =
+      this.markerMatcher.getMatchingHints(this.hintMarkers, tabCount);
     if (linksMatched.length === 0) {
       this.deactivateMode();
     } else if (linksMatched.length === 1) {
@@ -620,8 +663,8 @@ class LinkHintsMode {
   // Rotate the hints' z-index values so that hidden hints become visible.
   rotateHints() {
     // Get local, visible hint markers.
-    const localHintMarkers = this.hintMarkers.filter((m) =>
-      m.isLocalMarker() && (m.element.style.display !== "none")
+    const localHintMarkers = this.hintMarkers.filter(
+      (m) => m.isLocalMarker() && m.element.style.display !== "none",
     );
     // Fill in the markers' rects, if necessary.
     for (const marker of localHintMarkers) {
@@ -637,12 +680,12 @@ class LinkHintsMode {
       const results = [];
       for (const stack of stacks) {
         const markerOverlapsThisStack = this.markerOverlapsStack(marker, stack);
-        if (markerOverlapsThisStack && (stackForThisMarker == null)) {
+        if (markerOverlapsThisStack && stackForThisMarker == null) {
           // We've found an existing stack for this marker.
           stack.push(marker);
           stackForThisMarker = stack;
           results.push(stack);
-        } else if (markerOverlapsThisStack && (stackForThisMarker != null)) {
+        } else if (markerOverlapsThisStack && stackForThisMarker != null) {
           // This marker overlaps a second (or subsequent) stack; merge that stack into
           // stackForThisMarker and discard it.
           stackForThisMarker.push(...stack);
@@ -659,13 +702,13 @@ class LinkHintsMode {
       }
     }
 
-    const newMarkers = []
+    const newMarkers = [];
     for (let stack of stacks) {
       if (stack.length > 1) {
         // Push the last element to the beginning.
-        stack = stack.splice(-1, 1).concat(stack)
+        stack = stack.splice(-1, 1).concat(stack);
       }
-      newMarkers.push(...stack)
+      newMarkers.push(...stack);
     }
     this.hintMarkers = newMarkers;
     this.renderHints();
@@ -690,25 +733,34 @@ class LinkHintsMode {
             return Utils.nextTick(() => focusThisFrame({ highlight: true }));
           } else if (localHint.reason === "Scroll.") {
             // Tell the scroller that this is the activated element.
-            return handlerStack.bubbleEvent(Utils.isFirefox() ? "click" : "DOMActivate", {
-              target: clickEl,
-            });
+            return handlerStack.bubbleEvent(
+              Utils.isFirefox() ? "click" : "DOMActivate",
+              {
+                target: clickEl,
+              },
+            );
           } else if (localHint.reason === "Open.") {
-            return clickEl.open = !clickEl.open;
+            return (clickEl.open = !clickEl.open);
           } else if (DomUtils.isSelectable(clickEl)) {
             window.focus();
             return DomUtils.simulateSelect(clickEl);
           } else {
-            const clickActivator = (modifiers) => (link) => DomUtils.simulateClick(link, modifiers);
-            const linkActivator = this.mode.linkActivator != null
-              ? this.mode.linkActivator
-              : clickActivator(this.mode.clickModifiers);
+            const clickActivator = (modifiers) => (link) =>
+              DomUtils.simulateClick(link, modifiers);
+            const linkActivator =
+              this.mode.linkActivator != null
+                ? this.mode.linkActivator
+                : clickActivator(this.mode.clickModifiers);
             // Note(gdh1995): Here we should allow special elements to get focus,
             // <select>: latest Chrome refuses `mousedown` event, and we can only focus it to let
             //     user press space to activate the popup menu
             // <object> & <embed>: for Flash games which have their own key event handlers since we
             //     have been able to blur them by pressing `Escape`
-            if (["input", "select", "object", "embed"].includes(clickEl.nodeName.toLowerCase())) {
+            if (
+              ["input", "select", "object", "embed"].includes(
+                clickEl.nodeName.toLowerCase(),
+              )
+            ) {
               clickEl.focus();
             }
             HintCoordinator.lastClickedElementRef = new WeakRef(clickEl);
@@ -721,11 +773,13 @@ class LinkHintsMode {
     // If flash elements are created, then this function can be used later to remove them.
     let removeFlashElements = function () {};
     if (linkMatched.isLocalMarker()) {
-      const { top: viewportTop, left: viewportLeft } = DomUtils.getViewportTopLeft();
+      const { top: viewportTop, left: viewportLeft } =
+        DomUtils.getViewportTopLeft();
       const flashElements = Array.from(clickEl.getClientRects()).map((rect) =>
-        DomUtils.addFlashRect(Rect.translate(rect, viewportLeft, viewportTop))
+        DomUtils.addFlashRect(Rect.translate(rect, viewportLeft, viewportTop)),
       );
-      removeFlashElements = () => flashElements.map((flashEl) => DomUtils.removeElement(flashEl));
+      removeFlashElements = () =>
+        flashElements.map((flashEl) => DomUtils.removeElement(flashEl));
     }
 
     // If we're using a keyboard blocker, then the frame with the focus sends the "exit" message,
@@ -733,7 +787,8 @@ class LinkHintsMode {
     if (userMightOverType) {
       HintCoordinator.onExit.push(removeFlashElements);
       if (windowIsFocused()) {
-        const callback = (isSuccess) => HintCoordinator.sendMessage("exit", { isSuccess });
+        const callback = (isSuccess) =>
+          HintCoordinator.sendMessage("exit", { isSuccess });
         return Settings.get("waitForEnterForFilteredHints")
           ? new WaitForEnter(callback)
           : new TypingProtector(200, callback);
@@ -808,7 +863,7 @@ class AlphabetHints {
     if (this.linkHintCharacters.length == 0) return [];
     let hints = [""];
     let offset = 0;
-    while (((hints.length - offset) < linkCount) || (hints.length === 1)) {
+    while (hints.length - offset < linkCount || hints.length === 1) {
       const hint = hints[offset++];
       for (const ch of this.linkHintCharacters) {
         hints.push(ch + hint);
@@ -824,7 +879,9 @@ class AlphabetHints {
   getMatchingHints(hintMarkers) {
     const matchString = this.hintKeystrokeQueue.join("");
     return {
-      linksMatched: hintMarkers.filter((m) => m.hintString.startsWith(matchString)),
+      linksMatched: hintMarkers.filter((m) =>
+        m.hintString.startsWith(matchString),
+      ),
     };
   }
 
@@ -872,7 +929,9 @@ class FilterHints {
     if (linkText.length > 35) {
       linkText = linkText.slice(0, 33) + "...";
     }
-    const caption = marker.hintString + (marker.localHint.showLinkText ? ": " + linkText : "");
+    const caption =
+      marker.hintString +
+      (marker.localHint.showLinkText ? ": " + linkText : "");
     marker.element.innerHTML = spanWrap(caption);
   }
 
@@ -894,12 +953,14 @@ class FilterHints {
     const matchString = this.hintKeystrokeQueue.join("");
     let linksMatched = this.filterLinkHints(hintMarkers);
     linksMatched = linksMatched.filter((linkMarker) =>
-      linkMarker.hintString.startsWith(matchString)
+      linkMarker.hintString.startsWith(matchString),
     );
 
     // Visually highlight the active hint (that is, the one that will be activated if the user types
     // <Enter>).
-    tabCount = ((linksMatched.length * Math.abs(tabCount)) + tabCount) % linksMatched.length;
+    tabCount =
+      (linksMatched.length * Math.abs(tabCount) + tabCount) %
+      linksMatched.length;
 
     if (this.activeHintMarker?.element) {
       this.activeHintMarker.element.classList.remove("vimiumActiveHintMarker");
@@ -913,8 +974,9 @@ class FilterHints {
 
     return {
       linksMatched,
-      userMightOverType: (this.hintKeystrokeQueue.length === 0) &&
-        (this.linkTextKeystrokeQueue.length > 0),
+      userMightOverType:
+        this.hintKeystrokeQueue.length === 0 &&
+        this.linkTextKeystrokeQueue.length > 0,
     };
   }
 
@@ -922,8 +984,8 @@ class FilterHints {
     if (this.linkHintNumbers.indexOf(keyChar) >= 0) {
       this.hintKeystrokeQueue.push(keyChar);
     } else if (
-      (keyChar.toLowerCase() !== keyChar) &&
-      (this.linkHintNumbers.toLowerCase() !== this.linkHintNumbers.toUpperCase())
+      keyChar.toLowerCase() !== keyChar &&
+      this.linkHintNumbers.toLowerCase() !== this.linkHintNumbers.toUpperCase()
     ) {
       // The keyChar is upper case and the link hint "numbers" contain characters (e.g.
       // [a-zA-Z]). We don't want some upper-case letters matching hints (above) and some matching
@@ -931,7 +993,7 @@ class FilterHints {
       return;
       // We only accept <Space> and characters which are not used for splitting (e.g. "a", "b",
       // etc., but not "-").
-    } else if ((keyChar === " ") || !this.splitRegexp.test(keyChar)) {
+    } else if (keyChar === " " || !this.splitRegexp.test(keyChar)) {
       // Since we might renumber the hints, we should reset the current hintKeyStrokeQueue.
       this.hintKeystrokeQueue = [];
       this.linkTextKeystrokeQueue.push(keyChar.toLowerCase());
@@ -944,19 +1006,23 @@ class FilterHints {
 
   // Filter link hints by search string, renumbering the hints as necessary.
   filterLinkHints(hintMarkers) {
-    const scoreFunction = this.scoreLinkHint(this.linkTextKeystrokeQueue.join(""));
+    const scoreFunction = this.scoreLinkHint(
+      this.linkTextKeystrokeQueue.join(""),
+    );
     const matchingHintMarkers = hintMarkers
       .filter((linkMarker) => {
         linkMarker.score = scoreFunction(linkMarker);
-        return (this.linkTextKeystrokeQueue.length === 0) || (linkMarker.score > 0);
-      }).sort(function (a, b) {
+        return this.linkTextKeystrokeQueue.length === 0 || linkMarker.score > 0;
+      })
+      .sort(function (a, b) {
         if (b.score === a.score) return b.stableSortCount - a.stableSortCount;
         else return b.score - a.score;
       });
 
     if (
-      (matchingHintMarkers.length === 0) && (this.hintKeystrokeQueue.length === 0) &&
-      (this.linkTextKeystrokeQueue.length > 0)
+      matchingHintMarkers.length === 0 &&
+      this.hintKeystrokeQueue.length === 0 &&
+      this.linkTextKeystrokeQueue.length > 0
     ) {
       // We don't accept typed text which doesn't match any hints.
       this.linkTextKeystrokeQueue.pop();
@@ -974,16 +1040,20 @@ class FilterHints {
   // Assign a score to a filter match (higher is better). We assign a higher score for matches at
   // the start of a word, and a considerably higher score still for matches which are whole words.
   scoreLinkHint(linkSearchString) {
-    const searchWords = linkSearchString.trim().toLowerCase().split(this.splitRegexp);
+    const searchWords = linkSearchString
+      .trim()
+      .toLowerCase()
+      .split(this.splitRegexp);
     return (linkMarker) => {
       if (!(searchWords.length > 0)) return 0;
 
       // We only keep non-empty link words. Empty link words cannot be matched, and leading empty
       // link words disrupt the scoring of matches at the start of the text.
       if (!linkMarker.linkWords) {
-        linkMarker.linkWords = linkMarker.linkText.toLowerCase().split(this.splitRegexp).filter(
-          (term) => term,
-        );
+        linkMarker.linkWords = linkMarker.linkText
+          .toLowerCase()
+          .split(this.splitRegexp)
+          .filter((term) => term);
       }
 
       const linkWords = linkMarker.linkWords;
@@ -993,7 +1063,7 @@ class FilterHints {
           const position = linkWord.indexOf(searchWord);
           if (position < 0) {
             return 0; // No match.
-          } else if ((position === 0) && (searchWord.length === linkWord.length)) {
+          } else if (position === 0 && searchWord.length === linkWord.length) {
             if (idx === 0) return 8;
             else return 4; // Whole-word match.
           } else if (position === 0) {
@@ -1059,12 +1129,17 @@ const LocalHints = {
         const imgClientRects = element.getClientRects();
         mapName = mapName.replace(/^#/, "").replace('"', '\\"');
         const map = document.querySelector(`map[name=\"${mapName}\"]`);
-        if (map && (imgClientRects.length > 0)) {
+        if (map && imgClientRects.length > 0) {
           isClickable = true;
           const areas = map.getElementsByTagName("area");
-          let areasAndRects = DomUtils.getClientRectsForAreas(imgClientRects[0], areas);
+          let areasAndRects = DomUtils.getClientRectsForAreas(
+            imgClientRects[0],
+            areas,
+          );
           // We use this image property when detecting overlapping links.
-          areasAndRects = areasAndRects.map((o) => Object.assign(o, { image: element }));
+          areasAndRects = areasAndRects.map((o) =>
+            Object.assign(o, { image: element }),
+          );
           imageMapAreas.push(...areasAndRects);
         }
       }
@@ -1122,7 +1197,9 @@ const LocalHints = {
         const contentEditable = element.getAttribute("contentEditable");
         if (
           contentEditable != null &&
-          ["", "contenteditable", "true"].includes(contentEditable.toLowerCase())
+          ["", "contenteditable", "true"].includes(
+            contentEditable.toLowerCase(),
+          )
         ) {
           isClickable = true;
         }
@@ -1134,12 +1211,16 @@ const LocalHints = {
       const jsactionRules = element.getAttribute("jsaction").split(";");
       for (const jsactionRule of jsactionRules) {
         const ruleSplit = jsactionRule.trim().split(":");
-        if ((ruleSplit.length >= 1) && (ruleSplit.length <= 2)) {
-          const [eventType, namespace, actionName] = ruleSplit.length === 1
-            ? ["click", ...ruleSplit[0].trim().split("."), "_"]
-            : [ruleSplit[0], ...ruleSplit[1].trim().split("."), "_"];
+        if (ruleSplit.length >= 1 && ruleSplit.length <= 2) {
+          const [eventType, namespace, actionName] =
+            ruleSplit.length === 1
+              ? ["click", ...ruleSplit[0].trim().split("."), "_"]
+              : [ruleSplit[0], ...ruleSplit[1].trim().split("."), "_"];
           if (!isClickable) {
-            isClickable = (eventType === "click") && (namespace !== "none") && (actionName !== "_");
+            isClickable =
+              eventType === "click" &&
+              namespace !== "none" &&
+              actionName !== "_";
           }
         }
       }
@@ -1154,9 +1235,11 @@ const LocalHints = {
         isClickable ||= !element.disabled && !element.readOnly;
         break;
       case "input":
-        isClickable ||= !((element.getAttribute("type")?.toLowerCase() == "hidden") ||
+        isClickable ||= !(
+          element.getAttribute("type")?.toLowerCase() == "hidden" ||
           element.disabled ||
-          (element.readOnly && DomUtils.isSelectable(element)));
+          (element.readOnly && DomUtils.isSelectable(element))
+        );
         break;
       case "button":
       case "select":
@@ -1167,21 +1250,28 @@ const LocalHints = {
         isClickable = true;
         break;
       case "label":
-        isClickable ||= (element.control != null) &&
+        isClickable ||=
+          element.control != null &&
           !element.control.disabled &&
-          ((this.getLocalHintsForElement(element.control)).length === 0);
+          this.getLocalHintsForElement(element.control).length === 0;
         break;
       case "body":
-        isClickable ||= (element === document.body) && !windowIsFocused() &&
-            (window.innerWidth > 3) && (window.innerHeight > 3) &&
-            ((document.body != null ? document.body.tagName.toLowerCase() : undefined) !==
-              "frameset")
-          ? (reason = "Frame.")
-          : undefined;
-        isClickable ||= (element === document.body) && windowIsFocused() &&
-            Scroller.isScrollableElement(element)
-          ? (reason = "Scroll.")
-          : undefined;
+        isClickable ||=
+          element === document.body &&
+          !windowIsFocused() &&
+          window.innerWidth > 3 &&
+          window.innerHeight > 3 &&
+          (document.body != null
+            ? document.body.tagName.toLowerCase()
+            : undefined) !== "frameset"
+            ? (reason = "Frame.")
+            : undefined;
+        isClickable ||=
+          element === document.body &&
+          windowIsFocused() &&
+          Scroller.isScrollableElement(element)
+            ? (reason = "Scroll.")
+            : undefined;
         break;
       case "img":
         isClickable ||= ["zoom-in", "zoom-out"].includes(element.style.cursor);
@@ -1190,7 +1280,8 @@ const LocalHints = {
       case "ol":
       case "ul":
         isClickable ||=
-          (element.clientHeight < element.scrollHeight) && Scroller.isScrollableElement(element)
+          element.clientHeight < element.scrollHeight &&
+          Scroller.isScrollableElement(element)
             ? (reason = "Scroll.")
             : undefined;
         break;
@@ -1208,7 +1299,16 @@ const LocalHints = {
     // clickables are often wrapped in elements with such class names. So, when we find clickables
     // based only on their class name, we mark them as unreliable.
     const className = element.getAttribute("class");
-    if (!isClickable && className?.toLowerCase().includes("button")) {
+    const cursorStyle = element.style.cursor;
+    var parentElementCursorStyle;
+    if (element.parentElement) {
+      parentElementCursorStyle = element.parentElement.style.cursor;
+    }
+
+    if (
+      !isClickable &&
+      (className?.toLowerCase().includes("button") || cursorStyle === "pointer" || parentElementCursorStyle === "pointer")
+    ) {
       isClickable = true;
       possibleFalsePositive = true;
     }
@@ -1254,7 +1354,6 @@ const LocalHints = {
 
     return hints;
   },
-
   //
   // Returns element at a given (x,y) with an optional root element.
   // If the returned element is a shadow root, descend into that shadow root recursively until we
@@ -1357,16 +1456,20 @@ const LocalHints = {
 
       // Check middle of element first, as this is perhaps most likely to return true.
       const elementFromMiddlePoint = LocalHints.getElementFromPoint(
-        rect.left + (rect.width * 0.5),
-        rect.top + (rect.height * 0.5),
+        rect.left + rect.width * 0.5,
+        rect.top + rect.height * 0.5,
       );
-      const hasIntersection = elementFromMiddlePoint &&
+      const hasIntersection =
+        elementFromMiddlePoint &&
         (hint.element.contains(elementFromMiddlePoint) ||
           elementFromMiddlePoint.contains(hint.element));
       if (hasIntersection) return true;
 
       // Handle image maps
-      if (hint.element.localName == "area" && elementFromMiddlePoint == hint.image) {
+      if (
+        hint.element.localName == "area" &&
+        elementFromMiddlePoint == hint.image
+      ) {
         return true;
       }
 
@@ -1379,9 +1482,14 @@ const LocalHints = {
 
       for (const verticalCoord of verticalCoords) {
         for (const horizontalCoord of horizontalCoords) {
-          const elementFromPoint = LocalHints.getElementFromPoint(horizontalCoord, verticalCoord);
-          const hasIntersection = elementFromPoint &&
-            (hint.element.contains(elementFromPoint) || elementFromPoint.contains(hint.element));
+          const elementFromPoint = LocalHints.getElementFromPoint(
+            horizontalCoord,
+            verticalCoord,
+          );
+          const hasIntersection =
+            elementFromPoint &&
+            (hint.element.contains(elementFromPoint) ||
+              elementFromPoint.contains(hint.element));
           if (hasIntersection) return true;
         }
       }
@@ -1412,14 +1520,16 @@ const LocalHints = {
     const nodeName = element.nodeName.toLowerCase();
 
     if (nodeName === "input") {
-      if ((element.labels != null) && (element.labels.length > 0)) {
+      if (element.labels != null && element.labels.length > 0) {
         linkText = element.labels[0].textContent.trim();
         // Remove trailing ":" commonly found in labels.
         if (linkText[linkText.length - 1] === ":") {
           linkText = linkText.slice(0, linkText.length - 1);
         }
         showLinkText = true;
-      } else if ((element.getAttribute("type") || "").toLowerCase() === "file") {
+      } else if (
+        (element.getAttribute("type") || "").toLowerCase() === "file"
+      ) {
         linkText = "Choose File";
       } else if (element.type !== "password") {
         linkText = element.value;
@@ -1429,11 +1539,13 @@ const LocalHints = {
       }
       // Check if there is an image embedded in the <a> tag.
     } else if (
-      (nodeName === "a") && !element.textContent.trim() &&
+      nodeName === "a" &&
+      !element.textContent.trim() &&
       element.firstElementChild &&
-      (element.firstElementChild.nodeName.toLowerCase() === "img")
+      element.firstElementChild.nodeName.toLowerCase() === "img"
     ) {
-      linkText = element.firstElementChild.alt || element.firstElementChild.title;
+      linkText =
+        element.firstElementChild.alt || element.firstElementChild.title;
       if (linkText) {
         showLinkText = true;
       }
@@ -1500,7 +1612,11 @@ class WaitForEnter extends Mode {
 class HoverMode extends Mode {
   constructor(link) {
     super();
-    super.init({ name: "hover-mode", singleton: "hover-mode", exitOnEscape: true });
+    super.init({
+      name: "hover-mode",
+      singleton: "hover-mode",
+      exitOnEscape: true,
+    });
     this.link = link;
     DomUtils.simulateHover(this.link);
     this.onExit(() => DomUtils.simulateUnhover(this.link));
