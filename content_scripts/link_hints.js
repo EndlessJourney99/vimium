@@ -1299,15 +1299,23 @@ const LocalHints = {
     // clickables are often wrapped in elements with such class names. So, when we find clickables
     // based only on their class name, we mark them as unreliable.
     const className = element.getAttribute("class");
+    // HTML and css class is not reliable to determine if an element is clickable.
+    // some peoples use css class name like "button" or "btn" or none (like tailwindcss)
+    // But most of the time, a element that clickable has a pointer cursor.
     const cursorStyle = element.style.cursor;
     var parentElementCursorStyle;
     if (element.parentElement) {
       parentElementCursorStyle = element.parentElement.style.cursor;
     }
+    // some framework use this attribute to handle onclick... so what ever
+    const hasJsAction = element.hasAttribute("jsaction");
 
     if (
       !isClickable &&
-      (className?.toLowerCase().includes("button") || cursorStyle === "pointer" || parentElementCursorStyle === "pointer")
+      (className?.toLowerCase().includes("button") ||
+        cursorStyle === "pointer" ||
+        parentElementCursorStyle === "pointer" ||
+        hasJsAction)
     ) {
       isClickable = true;
       possibleFalsePositive = true;

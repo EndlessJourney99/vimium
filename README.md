@@ -166,3 +166,8 @@ See [CHANGELOG](CHANGELOG.md) for the major changes in each release.
 ## License
 
 Copyright (c) Phil Crosby, Ilya Sukhar. See [MIT-LICENSE.txt](MIT-LICENSE.txt) for details.
+# Insert your preferred key mappings here.
+map <c-j> scrollPageDown
+map <c-k> scrollPageUp
+map <c-h> previousTab
+map <c-l> nextTab
