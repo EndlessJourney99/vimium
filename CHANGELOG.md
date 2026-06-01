@@ -1,17 +1,43 @@
-2.3 (unreleased)
+2.4.1, 2.4.2 (2026-03-07)
 
-- Add a command listing page, which documents all commands and their options. Access it from the
-  Vimium Options page > Show available commands.
+- Fix issue where existing users were mistakenly opted-in to
+  [Vimium's new tab page](https://github.com/philc/vimium/pull/4795) for the `createTab` command.
+  (https://github.com/philc/vimium/issues/4859)
+- Fix exclusion rules is empty in downloaded backups. (https://github.com/philc/vimium/issues/4839)
+
+2.4.0 (2026-01-27)
+
+- Support a Vimium new tab experience: the browser can be configured to open a blank Vimium page as
+  the new tab page. In Vimium's settings, the Vomnibar can configured to open on new tabs. See
+  [instructions](https://github.com/philc/vimium?tab=readme-ov-file#how-to-allow-vimium-to-work-on-new-tab-pages).
+  (https://github.com/philc/vimium/pull/4795)
+- Make Google search result links work on sub-tabs like "Web".
+  (https://github.com/philc/vimium/issues/4750)
+
+2.3.1 (2025-11-12)
+
+- Fix Vimium to work with Chrome 144. (https://github.com/philc/vimium/issues/4785)
+
+2.3.0 (2025-06-30)
+
+- Add a command listing page, which documents all commands and their options. Access it
+  [on the web](https://vimium.github.io/commands/), or from the Vimium Options page > Show available
+  commands.
 - Some internal CSS classes were changed for Vimium's UI. This may affect those who have customized
   Vimium's CSS via the options page. (https://github.com/philc/vimium/issues/4668)
-- Breaking change: when creating a mapping for `setZoom`, a `level` argument is now required.
-  E.g.: `map z2 setZoom level=2.0`.
-- Make Vomnibar.activateBookmark accept a `query` option.
+- Breaking change: when creating a mapping for `setZoom`, a `level` argument is now required. E.g.:
+  `map z2 setZoom level=2.0`.
+- Make `Vomnibar.activateBookmark` accept a `query` option.
   (https://github.com/philc/vimium/pull/4591)
 - Fix `openCopiedUrlInCurrentTab` doesn't launch search queries.
   (https://github.com/philc/vimium/issues/4657)
-- Update `goPrevious` and `goNext` commands to work on again on google.com.
+- Make `openCopiedUrlInCurrentTab` accept a `position` option.
+- Update `goPrevious` and `goNext` commands to handle google.com's new layout.
   (https://github.com/philc/vimium/issues/4650)
+- Add a "hide update notifications" option for silencing "Vimium has been updated" notifications.
+  (https://github.com/philc/vimium/issues/4346)
+- Use dark mode styles in the HUD when the browser is in dark mode.
+- Bug fixes.
 
 2.2.1 (2025-03-20)
 

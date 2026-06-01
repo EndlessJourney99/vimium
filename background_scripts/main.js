@@ -6,20 +6,21 @@ import * as bgUtils from "../background_scripts/bg_utils.js";
 import "../background_scripts/all_commands.js";
 import { Commands } from "../background_scripts/commands.js";
 import * as exclusions from "../background_scripts/exclusions.js";
-import "../background_scripts/completion_engines.js";
-import "../background_scripts/completion_search.js";
-import "../background_scripts/completion.js";
+import "../background_scripts/completion/search_engines.js";
+import "../background_scripts/completion/search_wrapper.js";
+import "../background_scripts/completion/completers.js";
 import "../background_scripts/tab_operations.js";
 import * as marks from "../background_scripts/marks.js";
 
 import {
   BookmarkCompleter,
+  CommandCompleter,
   DomainCompleter,
   HistoryCompleter,
   MultiCompleter,
   SearchEngineCompleter,
   TabCompleter,
-} from "./completion.js";
+} from "./completion/completers.js";
 
 // NOTE(philc): This file has many superfluous return statements in its functions, as a result of
 // converting from coffeescript to es6. Many can be removed, but I didn't take the time to
@@ -43,6 +44,7 @@ chrome.storage.session.set({ vimiumSecret: secretToken });
 
 const completionSources = {
   bookmarks: new BookmarkCompleter(),
+  commands: new CommandCompleter(),
   history: new HistoryCompleter(),
   domains: new DomainCompleter(),
   tabs: new TabCompleter(),
@@ -58,6 +60,7 @@ const completers = {
     completionSources.searchEngines,
   ]),
   bookmarks: new MultiCompleter([completionSources.bookmarks]),
+  commands: new MultiCompleter([completionSources.commands]),
   tabs: new MultiCompleter([completionSources.tabs]),
 };
 
@@ -256,22 +259,24 @@ const BackgroundCommands = {
           request.urls = urlList;
         } else {
           // Otherwise, just create a new tab.
-          let newTabUrl = Settings.get("newTabUrl");
-          if (newTabUrl == "pages/blank.html") {
-            // "pages/blank.html" does not work in incognito mode, so fall back to "chrome://newtab"
-            // instead.
-            newTabUrl = request.tab.incognito
-              ? Settings.defaultOptions.newTabUrl
-              : chrome.runtime.getURL(newTabUrl);
+          let url;
+          const destination = Settings.get("newTabDestination");
+          const customUrl = Settings.get("newTabCustomUrl");
+          if (destination == Settings.newTabDestinations.vimiumNewTabPage) {
+            url = Settings.vimiumNewTabPageUrl;
+          } else if (destination == Settings.newTabDestinations.customUrl && customUrl.length > 0) {
+            url = customUrl;
+          } else {
+            url = UrlUtils.chromeNewTabUrl;
           }
-          request.urls = [newTabUrl];
+          request.urls = [url];
         }
       }
     }
     if (request.registryEntry.options.incognito || request.registryEntry.options.window) {
       // Firefox does not allow an incognito window to be created with the URL about:newtab. It
       // throws this error: "Illegal URL: about:newtab".
-      const urls = request.urls.filter((u) => u != Settings.defaultOptions.newTabUrl);
+      const urls = request.urls.filter((u) => u != UrlUtils.chromeNewTabUrl);
       const windowConfig = {
         url: urls,
         incognito: request.registryEntry.options.incognito || false,
@@ -598,6 +603,12 @@ const HintCoordinator = {
 const sendRequestHandlers = {
   runBackgroundCommand(request, sender) {
     return BackgroundCommands[request.registryEntry.command](request, sender);
+  },
+  // Executes a command as if it was run in normal mode by a content script.
+  // Used by the Vomnibar's command completer, which can be used to execute any command in Vimium.
+  // The "request" must contain a "count" and a valid "command: RegistryEntry" parameter.
+  runNormalModeCommand(request, sender) {
+    chrome.tabs.sendMessage(sender.tab.id, request);
   },
   // getCurrentTabUrl is used by the content scripts to get their full URL, because window.location
   // cannot help with Chrome-specific URLs like "view-source:http:..".

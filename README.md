@@ -3,6 +3,8 @@
 Vimium is a browser extension that provides keyboard-based navigation and control of the web in the
 spirit of the Vim editor.
 
+[Watch the demo video](https://www.youtube.com/watch?v=t67Sn0RGK54).
+
 **Installation instructions:**
 
 - Chrome:
@@ -110,8 +112,8 @@ Vimium supports command repetition so, for example, hitting `5t` will open 5 tab
 succession. `<Esc>` (or `<c-[>`) will clear any partial commands in the queue and will also exit
 insert and find modes.
 
-There are additional commands which aren't included in this README; refer to the help dialog (type `?`) for a
-full list.
+There are additional commands which aren't included in this README; refer to the help dialog (type
+`?`) for a full list.
 
 ## Custom Key Mappings
 
@@ -130,8 +132,8 @@ Examples:
 
 - `map <c-d> scrollPageDown` maps ctrl+d to scrolling the page down. Chrome's default behavior of
   showing a bookmark dialog is suppressed.
-- `map r reload hard` maps the r key to reloading the page, and also includes the "hard"
-  option to hard-reload the page.
+- `map r reload hard` maps the r key to reloading the page, and also includes the "hard" option to
+  hard-reload the page.
 - `unmap <c-d>` removes any mapping for ctrl+d and restores Chrome's default behavior.
 - `unmap r` removes any mapping for the r key.
 
@@ -152,11 +154,20 @@ The following special keys are available for mapping:
 Shifts are automatically detected so, for example, `<c-&>` corresponds to ctrl+shift+7 on an English
 keyboard.
 
+## How to allow Vimium to work on new tab pages
+
+- Vimium will work on new tab pages which are opened with Vimium's `createTab` command (mapped to
+  `t` by default).
+- To have Vimium work on <em>all</em> new tab pages opened by the browser (e.g. via `cmd-t` or
+  `ctrl-t` shortcuts), a companion
+  [Vimium New Tab Page extension](https://github.com/philc/vimium-new-tab/) is required.
+- Once that is installed, all new tabs will open a blank Vimium new tab page.
+
 ## More documentation
 
-* [FAQ](https://github.com/philc/vimium/wiki/FAQ)
-* [Command listing](https://vimium.github.io/commands/)
-* [Vimium's GitHub wiki](https://github.com/philc/vimium/wiki): documentation the more advanced
+- [FAQ](https://github.com/philc/vimium/wiki/FAQ)
+- [Command listing](https://vimium.github.io/commands/)
+- [Vimium's GitHub wiki](https://github.com/philc/vimium/wiki): documentation for the more advanced
   features.
 
 ## Contributing

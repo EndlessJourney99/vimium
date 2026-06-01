@@ -514,7 +514,8 @@ class LinkHintsMode {
       el.style.top = localHint.rect.top + "px";
       // Note that Vimium's CSS is user-customizable. We're adding the "vimiumHintMarker" class here
       // for users to customize. See further comments about this in vimium.css.
-      el.className = "vimium-reset internal-vimium-hint-marker vimiumHintMarker";
+      el.className =
+        "vimium-reset internal-vimium-hint-marker vimiumHintMarker";
       Object.assign(marker, {
         element: el,
         localHint,
@@ -680,7 +681,7 @@ class LinkHintsMode {
     // Get local, visible hint markers.
     const [localMarkers, otherMarkers] = partition(
       this.hintMarkers,
-      (m) => m.isLocalMarker() && (m.element.style.display !== "none"),
+      (m) => m.isLocalMarker() && m.element.style.display !== "none",
     );
 
     // Fill in the markers' rects, if necessary.
@@ -697,7 +698,7 @@ class LinkHintsMode {
       const results = [];
       for (const stack of stacks) {
         const markerOverlapsThisStack = this.markerOverlapsStack(m, stack);
-        if (markerOverlapsThisStack && (stackForThisMarker == null)) {
+        if (markerOverlapsThisStack && stackForThisMarker == null) {
           // We've found an existing stack for this marker.
           stack.push(m);
           stackForThisMarker = stack;
@@ -858,7 +859,9 @@ class AlphabetHints {
     // Ensure we have more than 1 character to generate hint strings. With 1 character, every hint
     // will be another hint's prefix ("1", "11", ...).
     if (this.linkHintCharacters.length <= 1) {
-      throw new Error("The linkHintCharacters setting must have more than 1 character.");
+      throw new Error(
+        "The linkHintCharacters setting must have more than 1 character.",
+      );
     }
     this.hintKeystrokeQueue = [];
   }
@@ -929,7 +932,9 @@ class FilterHints {
     // Ensure we have more than 1 character to generate hint strings. With 1 character, every hint
     // will be another hint's prefix ("1", "11", ...).
     if (this.linkHintNumbers.length <= 1) {
-      throw new Error("The linkHintNumbers setting must have more than 1 character.");
+      throw new Error(
+        "The linkHintNumbers setting must have more than 1 character.",
+      );
     }
 
     this.hintKeystrokeQueue = [];
@@ -1219,6 +1224,7 @@ const LocalHints = {
         "menuitemcheckbox",
         "menuitemradio",
         "radio",
+        "textbox",
       ];
       if (role != null && clickableRoles.includes(role.toLowerCase())) {
         isClickable = true;
@@ -1285,16 +1291,22 @@ const LocalHints = {
           this.getLocalHintsForElement(element.control).length === 0;
         break;
       case "body":
-        isClickable ||= (element === document.body) && !windowIsFocused() &&
-            (globalThis.innerWidth > 3) && (globalThis.innerHeight > 3) &&
-            ((document.body != null ? document.body.tagName.toLowerCase() : undefined) !==
-              "frameset")
-          ? (reason = "Frame.")
-          : undefined;
-        isClickable ||= (element === document.body) && windowIsFocused() &&
-            Scroller.isScrollableElement(element)
-          ? (reason = "Scroll.")
-          : undefined;
+        isClickable ||=
+          element === document.body &&
+          !windowIsFocused() &&
+          globalThis.innerWidth > 3 &&
+          globalThis.innerHeight > 3 &&
+          (document.body != null
+            ? document.body.tagName.toLowerCase()
+            : undefined) !== "frameset"
+            ? (reason = "Frame.")
+            : undefined;
+        isClickable ||=
+          element === document.body &&
+          windowIsFocused() &&
+          Scroller.isScrollableElement(element)
+            ? (reason = "Scroll.")
+            : undefined;
         break;
       case "img":
         isClickable ||= ["zoom-in", "zoom-out"].includes(element.style.cursor);
@@ -1341,6 +1353,12 @@ const LocalHints = {
         hasJsAction)
     ) {
       isClickable = true;
+      possibleFalsePositive = true;
+    }
+
+    // If the span is clickable but wraps something else that is clickable, we want to instead favor
+    // showing hints for descendants which are clickable. Flag the span as a possible false postive.
+    if (tagName == "span") {
       possibleFalsePositive = true;
     }
 
@@ -1403,7 +1421,10 @@ const LocalHints = {
     if (element && element.shadowRoot) {
       // A shadow root can contain just a text node; see #4620. In that case, return the shadow root
       // itself.
-      return LocalHints.getElementFromPoint(x, y, element.shadowRoot, stack) || element;
+      return (
+        LocalHints.getElementFromPoint(x, y, element.shadowRoot, stack) ||
+        element
+      );
     }
 
     return element;
